@@ -15,7 +15,7 @@
 **Distributor from United Kingdom:** KSEC Worldwide (@KSEC_KC).
 
 The developers and collaborators of this project do not earn money with this. 
-You can invite me for a coffee to further develop Low-Cost hacking devices. If you don't invite me for a coffee, nothing happens, I will continue developing devices.
+You can invite Joel for a coffee to further develop Low-Cost hacking devices. If you don't invite me for a coffee, nothing happens, I will continue developing devices.
 
 [![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/E1E614OA5)
 
@@ -41,9 +41,9 @@ You can invite me for a coffee to further develop Low-Cost hacking devices. If y
 **Discord Group:** https://discord.gg/evilcrowrf
 
 # 🚀 Stability and Functionality Updates
-The recommended firmware in this repository has been patched and configured to ensure reliable compilation and stable runtime performance on modern ESP32 environments.
+The updated firmware in this repository for v1.3.2 has been patched and configured to ensure reliable compilation and stable runtime performance on modern ESP32 environments and current versions of Arduino IDE.
 
-We have resolved critical library version conflicts and optimized the web server's file handling to prevent runtime crashes (HTTP500 errors) and make the web panel fully functional.
+I have resolved critical library version conflicts and optimized the web server's file handling to prevent runtime crashes (HTTP500 errors) and make the web panel fully functional.
 
 ### ✅ Key Fixes Implemented
 * Fixed Library Conflicts: Resolved the persistent HTTP_METHOD conflicts and the fatal ElegantOTA incompatibility errors that arise when mixing ElegantOTA and ESPAsyncWebServer.
