@@ -3,16 +3,17 @@
 #include <WiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include <AsyncElegantOTA.h>
+#include <ElegantOTA.h> 
+#include <elop.h>
 #define DEST_FS_USES_SD
 #include <ESP32-targz.h>
-#include <SPIFFSEditor.h>
 #include <EEPROM.h>
 #include "SPIFFS.h"
 #include "SPI.h"
 #include <WiFiAP.h>
 #include "FS.h"
 #include "SD.h"
+#include <esp_task_wdt.h>
 
 #define eepromsize 4096
 #define samplesize 2000
@@ -575,15 +576,20 @@ void poweron_blink(){
 }
 
 void force_reset() {
-  esp_task_wdt_init(1,true);
-  esp_task_wdt_add(NULL);
-  while(true);
+    esp_task_wdt_init(1000, true); 
+    
+    esp_task_wdt_add(NULL);
+    while(true);
 }
 
 void setup() {
-
-  Serial.begin(38400);
+  
+  Serial.begin(115200);
   power_management();
+
+  controlserver.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(SD, "/HTML/index.html", "text/html");
+});
 
   SPIFFS.begin(formatOnFail);
 
@@ -615,57 +621,40 @@ void setup() {
   delay(2000);
   
   sdspi.begin(18, 19, 23, 22);
-  SD.begin(22, sdspi);
-  pinMode(push1, INPUT);
-  pinMode(push2, INPUT);
+if (!SD.begin(22, sdspi)) {
+    Serial.println("FATAL ERROR: SD Card initialization failed. Check wiring/power.");
+    // Blink LED 20 times fast to confirm failure without serial monitor
+    led_blink(20, 50); 
+    while (true); // FREEZE the ESP32 to prevent web server startup
+} else {
+    Serial.println("SD Card initialized OK.");
+}
+  
+  controlserver.serveStatic("/", SD, "/HTML/"); 
+  
+controlserver.onNotFound([](AsyncWebServerRequest *request) {
+    String path = request->url();
+    
+    // 1. Check if the requested path is already a file that failed to load
+    if (SD.exists(path)) {
+        request->send(SD, path, String(), false);
+        return;
+    }
+    
+    // Assume it's a missing HTML page and append .html
+    String htmlPath = "/HTML" + path + ".html";
+    if (SD.exists(htmlPath)) {
+        request->send(SD, htmlPath, "text/html");
+        return;
+    }
 
-  controlserver.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SD, "/HTML/index.html", "text/html");
-  });
-
-  controlserver.on("/rxconfig", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SD, "/HTML/rxconfig.html", "text/html");
-  });
-
-  controlserver.on("/txconfig", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SD, "/HTML/txconfig.html", "text/html");
-  });
-
-  controlserver.on("/txprotocol", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SD, "/HTML/txprotocol.html", "text/html");
-  });
-
-  controlserver.on("/txbinary", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SD, "/HTML/txbinary.html", "text/html");
-  });
-
-  controlserver.on("/btnconfig", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SD, "/HTML/btn3.html", "text/html");
-  });
-
-  controlserver.on("/wificonfig", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SD, "/HTML/wificonfig.html", "text/html");
-  });
-
-  controlserver.on("/btnconfigtesla", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SD, "/HTML/btnconfigtesla.html", "text/html");
-  });
-
-  controlserver.on("/txprotocol", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SD, "/HTML/txprotocol.html", "text/html");
-  });
-
-  controlserver.on("/updatesd", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SD, "/HTML/updatesd.html", "text/html");
-  });
+    // Default 404
+    request->send(404, "text/plain", "404: Not Found");
+});
 
   controlserver.on("/listxmlfiles", HTTP_GET, [](AsyncWebServerRequest *request) {
     listDir(SD, "/URH", 0);
     request->send(SD, "/dir.txt", "text/html");
-  });
-
-  controlserver.on("/uploadxmlfiles", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SD, "/HTML/uploadxmlfiles.html", "text/html");
   });
 
   controlserver.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -673,14 +662,6 @@ void setup() {
 
   controlserver.on("/uploadsd", HTTP_POST, [](AsyncWebServerRequest *request) {
         request->send(200); }, handleUploadSD);
-
-  controlserver.on("/jammer", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SD, "/HTML/jammer.html", "text/html");
-  });
-
-  controlserver.on("/txtesla", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SD, "/HTML/txtesla.html", "text/html");
-  });
 
   controlserver.on("/stopjammer", HTTP_POST, [](AsyncWebServerRequest *request){
     jammer_tx = "0";
@@ -1157,14 +1138,6 @@ void setup() {
     appendFile(SD, "/logs.txt","Viewlog:\n", "<br>\n");
   });
 
-  controlserver.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SD, "/HTML/style.css", "text/css");
-  });
-
-  controlserver.on("/lib.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SD, "/HTML/javascript.js", "text/javascript");
-  });
-
   controlserver.on("/setwificonfig", HTTP_POST, [](AsyncWebServerRequest *request) {
     String ssid_value = request->arg("ssid");
     String password_value = request->arg("password");
@@ -1191,7 +1164,7 @@ void setup() {
     }
   });
 
-  AsyncElegantOTA.begin(&controlserver);
+  ElegantOTA.begin(&controlserver);
   controlserver.begin();
 
   ELECHOUSE_cc1101.addSpiPin(14, 12, 13, 5, 0);
