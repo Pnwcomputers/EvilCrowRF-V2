@@ -15,7 +15,7 @@
 **Distributor from United Kingdom:** KSEC Worldwide (@KSEC_KC).
 
 The developers and collaborators of this project do not earn money with this. 
-You can invite Joel for a coffee to further develop Low-Cost hacking devices. If you don't invite me for a coffee, nothing happens, I will continue developing devices.
+You can invite Joel for a coffee to further develop Low-Cost hacking devices. If you don't invite him for a coffee, nothing happens, he will continue developing devices.
 
 [![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/E1E614OA5)
 
